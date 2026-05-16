@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-slate-900 text-slate-100;
+    font-family: 'Inter', system-ui, sans-serif;
+    /* Mobile: prevent overscroll bounce */
+    overscroll-behavior: none;
+  }
+
+  /* Smooth scrolling */
+  * {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep scrollable */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Desktop: center and max-width the app */
+@media (min-width: 640px) {
+  #root {
+    max-width: 440px;
+    margin: 0 auto;
+    min-height: 100vh;
+    border-left: 1px solid rgb(30 41 59);
+    border-right: 1px solid rgb(30 41 59);
+  }
+}
