@@ -17,7 +17,7 @@ function getGreeting(): string {
 
 export default function HomeScreen() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { profile, level, xpProgress, daysToExam, setExamDate } = useGame();
   const { dueCount } = useRevision();
   const { can } = useMode();
@@ -44,7 +44,15 @@ export default function HomeScreen() {
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <header className="px-5 pt-12 pb-6">
-        <p className="text-slate-400 text-sm">{getGreeting()}</p>
+        <div className="flex items-center justify-between">
+          <p className="text-slate-400 text-sm">{getGreeting()}</p>
+          <button
+            onClick={() => { logout(); navigate('/login'); }}
+            className="text-xs text-slate-500 hover:text-red-400 transition-colors font-medium"
+          >
+            Sign out
+          </button>
+        </div>
         <h1 className="text-3xl font-bold mt-0.5">{firstName} 👋</h1>
 
         {/* Stat pills row */}
