@@ -26,7 +26,7 @@ export default function RegisterScreen() {
 
     setLoading(true);
     await new Promise((r) => setTimeout(r, 300));
-    const err = register(name, email, password, exam, classLevel);
+    const err = await register(name, email, password, exam, classLevel);
     setLoading(false);
 
     if (err) {

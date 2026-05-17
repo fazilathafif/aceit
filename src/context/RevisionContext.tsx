@@ -1,16 +1,9 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useEffect,
-  useMemo,
-  type ReactNode,
-} from 'react';
-import type { RevisionItem, Bookmark } from '../types';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import type { RevisionItem } from '../types';
 import { sm2Update, newRevisionItem } from '../lib/sm2';
 import { getToday } from '../lib/gameUtils';
 import { QUESTION_BANK } from '../data/questions';
+import { api } from '../lib/api';
 
 // ─── Question lookup map (built once) ─────────────────────────────────────────
 const Q_MAP = new Map(QUESTION_BANK.map((q) => [q.id, q]));
@@ -90,13 +83,19 @@ export function RevisionProvider({ children, userId }: { children: ReactNode; us
   }, [userId]);
 
   const saveQueue = useCallback((q: RevisionItem[]) => {
-    if (userId) localStorage.setItem(QUEUE_KEY(userId), JSON.stringify(q));
+    if (!userId) return;
+    localStorage.setItem(QUEUE_KEY(userId), JSON.stringify(q));
+    if (!userId.startsWith('demo_')) {
+      api.put('/api/revision/queue', q).catch(() => {});
+    }
   }, [userId]);
   const saveBookmarks = useCallback((b: string[]) => {
-    if (userId) localStorage.setItem(BOOK_KEY(userId), JSON.stringify(b));
+    if (!userId) return;
+    localStorage.setItem(BOOK_KEY(userId), JSON.stringify(b));
   }, [userId]);
   const saveErrors = useCallback((e: string[]) => {
-    if (userId) localStorage.setItem(ERROR_KEY(userId), JSON.stringify(e));
+    if (!userId) return;
+    localStorage.setItem(ERROR_KEY(userId), JSON.stringify(e));
   }, [userId]);
 
   const today = getToday();

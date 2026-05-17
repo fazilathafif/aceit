@@ -1,258 +1,177 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { User, Preferences, Exam, ClassLevel, QuizHistory } from '../types';
+import { api, saveToken, clearToken } from '../lib/api';
 
-// ─── Demo accounts (never persisted, always available) ────────────────────────
-const DEMO_USERS: (User & { password: string })[] = [
-  {
-    id: 'demo_neet',
-    name: 'NEET Student',
-    email: 'demo@neet',
-    exam: 'NEET',
-    classLevel: 'Both',
-    passwordHash: '',
-    password: 'demo',
-  },
-  {
-    id: 'demo_jee',
-    name: 'JEE Student',
-    email: 'demo@jee',
-    exam: 'JEE_MAIN',
-    classLevel: 'Both',
-    passwordHash: '',
-    password: 'demo',
-  },
-];
-
-// ─── localStorage helpers ─────────────────────────────────────────────────────
-const KEYS = {
-  users: 'aceit_users',
-  prefs: (id: string) => `aceit_prefs_${id}`,
-  history: (id: string) => `aceit_history_${id}`,
-};
-
-function encode(pw: string) {
-  return btoa(pw);
-}
-
-function readUsers(): User[] {
-  try {
-    return JSON.parse(localStorage.getItem(KEYS.users) ?? '[]');
-  } catch {
-    return [];
-  }
-}
-
-function writeUsers(users: User[]) {
-  localStorage.setItem(KEYS.users, JSON.stringify(users));
-}
-
-function readSession(): string | null {
-  return (
-    localStorage.getItem('aceit_session') ??
-    sessionStorage.getItem('aceit_session')
-  );
-}
-
-function writeSession(id: string, remember: boolean) {
-  if (remember) {
-    localStorage.setItem('aceit_session', id);
-    sessionStorage.removeItem('aceit_session');
-  } else {
-    sessionStorage.setItem('aceit_session', id);
-    localStorage.removeItem('aceit_session');
-  }
-}
-
-function clearSession() {
-  localStorage.removeItem('aceit_session');
-  sessionStorage.removeItem('aceit_session');
-}
-
-function resolveUser(id: string | null): User | null {
-  if (!id) return null;
-  const demo = DEMO_USERS.find((d) => d.id === id);
-  if (demo) return demo;
-  return readUsers().find((u) => u.id === id) ?? null;
-}
-
-// ─── Context ──────────────────────────────────────────────────────────────────
 interface AuthContextValue {
   user: User | null;
   preferences: Preferences | null;
   isDemo: boolean;
-  login: (email: string, password: string, remember: boolean) => string | null; // returns error msg or null
+  loading: boolean;
+  login: (email: string, password: string, remember: boolean) => Promise<string | null>;
   loginDemo: (id: 'demo_neet' | 'demo_jee') => void;
-  register: (name: string, email: string, password: string, exam: Exam, classLevel: ClassLevel) => string | null;
+  register: (name: string, email: string, password: string, exam: Exam, classLevel: ClassLevel) => Promise<string | null>;
   logout: () => void;
   savePreferences: (prefs: Preferences) => void;
   erasePreferences: () => void;
-  addHistory: (entry: QuizHistory) => void;
+  addHistory: (entry: Omit<QuizHistory, 'id'>) => Promise<void>;
   getHistory: () => QuizHistory[];
-  clearHistory: () => void;
+  clearHistory: () => Promise<void>;
+  setExamDateRemote: (date: string) => Promise<void>;
 }
+
+// ─── Demo accounts (local only, never hit the server) ─────────────────────────
+const DEMO_USERS: User[] = [
+  { id: 'demo_neet', name: 'NEET Student', email: 'demo@neet', exam: 'NEET', classLevel: 'Both', passwordHash: '' },
+  { id: 'demo_jee',  name: 'JEE Student',  email: 'demo@jee',  exam: 'JEE_MAIN', classLevel: 'Both', passwordHash: '' },
+];
+
+const PREFS_KEY = (id: string) => `aceit_prefs_${id}`;
+const HISTORY_KEY = (id: string) => `aceit_history_${id}`;
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => resolveUser(readSession()));
-  const [preferences, setPreferences] = useState<Preferences | null>(() => {
-    const id = readSession();
-    if (!id) return null;
-    try {
-      return JSON.parse(localStorage.getItem(KEYS.prefs(id)) ?? 'null');
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser]               = useState<User | null>(null);
+  const [preferences, setPreferences] = useState<Preferences | null>(null);
+  const [history, setHistory]         = useState<QuizHistory[]>([]);
+  const [loading, setLoading]         = useState(true);
 
   const isDemo = user?.id.startsWith('demo_') ?? false;
 
-  const login = useCallback(
-    (email: string, password: string, remember: boolean): string | null => {
-      const normalised = email.trim().toLowerCase();
-
-      // Check demo users
-      const demo = DEMO_USERS.find(
-        (d) => d.email === normalised && d.password === password
-      );
-      if (demo) {
-        writeSession(demo.id, remember);
-        setUser(demo);
-        try {
-          setPreferences(JSON.parse(localStorage.getItem(KEYS.prefs(demo.id)) ?? 'null'));
-        } catch {
-          setPreferences(null);
-        }
-        return null;
-      }
-
-      // Check registered users
-      const found = readUsers().find((u) => u.email === normalised);
-      if (!found) return 'No account found with that email.';
-      if (found.passwordHash !== encode(password)) return 'Incorrect password.';
-
-      writeSession(found.id, remember);
-      setUser(found);
+  // ── On mount: restore session ───────────────────────────────────────────────
+  useEffect(() => {
+    async function restore() {
+      const token = localStorage.getItem('aceit_token') ?? sessionStorage.getItem('aceit_token');
+      if (!token) { setLoading(false); return; }
       try {
-        setPreferences(JSON.parse(localStorage.getItem(KEYS.prefs(found.id)) ?? 'null'));
+        const u = await api.get<User>('/api/auth/me');
+        setUser(u);
+        setPreferences(readLocalPrefs(u.id));
+        setHistory(readLocalHistory(u.id));
       } catch {
-        setPreferences(null);
+        clearToken();
+      } finally {
+        setLoading(false);
       }
+    }
+    restore();
+  }, []);
+
+  // ── localStorage helpers ────────────────────────────────────────────────────
+  function readLocalPrefs(id: string): Preferences | null {
+    try { return JSON.parse(localStorage.getItem(PREFS_KEY(id)) ?? 'null'); } catch { return null; }
+  }
+  function readLocalHistory(id: string): QuizHistory[] {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY(id)) ?? '[]'); } catch { return []; }
+  }
+
+  // ── Auth actions ────────────────────────────────────────────────────────────
+  const login = useCallback(async (email: string, password: string, remember: boolean): Promise<string | null> => {
+    // Demo shortcut
+    const demoEmail = email.trim().toLowerCase();
+    const demo = DEMO_USERS.find((d) => d.email === demoEmail);
+    if (demo && password === 'demo') {
+      saveToken('demo_token', remember);
+      setUser(demo);
+      setPreferences(readLocalPrefs(demo.id));
+      setHistory(readLocalHistory(demo.id));
       return null;
-    },
-    []
-  );
+    }
+    try {
+      const { token, user: u } = await api.post<{ token: string; user: User }>('/api/auth/login', { email, password });
+      saveToken(token, remember);
+      setUser(u);
+      setPreferences(readLocalPrefs(u.id));
+      setHistory(readLocalHistory(u.id));
+      return null;
+    } catch (e) {
+      return (e as Error).message;
+    }
+  }, []);
 
   const loginDemo = useCallback((id: 'demo_neet' | 'demo_jee') => {
     const demo = DEMO_USERS.find((d) => d.id === id)!;
-    writeSession(demo.id, false);
+    saveToken('demo_token', false);
     setUser(demo);
+    setPreferences(readLocalPrefs(demo.id));
+    setHistory(readLocalHistory(demo.id));
+  }, []);
+
+  const register = useCallback(async (name: string, email: string, password: string, exam: Exam, classLevel: ClassLevel): Promise<string | null> => {
     try {
-      setPreferences(JSON.parse(localStorage.getItem(KEYS.prefs(demo.id)) ?? 'null'));
-    } catch {
+      const { token, user: u } = await api.post<{ token: string; user: User }>('/api/auth/register', { name, email, password, exam, classLevel });
+      saveToken(token, true);
+      setUser(u);
       setPreferences(null);
+      setHistory([]);
+      return null;
+    } catch (e) {
+      return (e as Error).message;
     }
   }, []);
 
-  const register = useCallback(
-    (
-      name: string,
-      email: string,
-      password: string,
-      exam: Exam,
-      classLevel: ClassLevel
-    ): string | null => {
-      const normalised = email.trim().toLowerCase();
-      if (readUsers().some((u) => u.email === normalised))
-        return 'An account with this email already exists.';
-
-      const newUser: User = {
-        id: `user_${Date.now()}`,
-        name: name.trim(),
-        email: normalised,
-        exam,
-        classLevel,
-        passwordHash: encode(password),
-      };
-      writeUsers([...readUsers(), newUser]);
-      writeSession(newUser.id, true);
-      setUser(newUser);
-      setPreferences(null);
-      return null;
-    },
-    []
-  );
-
   const logout = useCallback(() => {
-    clearSession();
+    clearToken();
     setUser(null);
     setPreferences(null);
+    setHistory([]);
   }, []);
 
-  const savePreferences = useCallback(
-    (prefs: Preferences) => {
-      if (!user) return;
-      localStorage.setItem(KEYS.prefs(user.id), JSON.stringify(prefs));
-      setPreferences(prefs);
-    },
-    [user]
-  );
+  // ── Preferences ─────────────────────────────────────────────────────────────
+  const savePreferences = useCallback((prefs: Preferences) => {
+    if (!user) return;
+    localStorage.setItem(PREFS_KEY(user.id), JSON.stringify(prefs));
+    setPreferences(prefs);
+  }, [user]);
 
   const erasePreferences = useCallback(() => {
     if (!user) return;
-    localStorage.removeItem(KEYS.prefs(user.id));
+    localStorage.removeItem(PREFS_KEY(user.id));
     setPreferences(null);
   }, [user]);
 
-  const addHistory = useCallback(
-    (entry: QuizHistory) => {
-      if (!user) return;
-      const key = KEYS.history(user.id);
-      const existing: QuizHistory[] = JSON.parse(
-        localStorage.getItem(key) ?? '[]'
-      );
-      localStorage.setItem(key, JSON.stringify([entry, ...existing].slice(0, 50)));
-    },
-    [user]
-  );
-
-  const getHistory = useCallback((): QuizHistory[] => {
-    if (!user) return [];
-    try {
-      return JSON.parse(localStorage.getItem(KEYS.history(user.id)) ?? '[]');
-    } catch {
-      return [];
-    }
-  }, [user]);
-
-  const clearHistory = useCallback(() => {
+  // ── Quiz history ─────────────────────────────────────────────────────────────
+  const addHistory = useCallback(async (entry: Omit<QuizHistory, 'id'>) => {
     if (!user) return;
-    localStorage.removeItem(KEYS.history(user.id));
-  }, [user]);
+    // Save to server (non-demo)
+    if (!isDemo) {
+      try {
+        await api.post('/api/quiz/history', entry);
+      } catch { /* fail silently, keep local copy */ }
+    }
+    // Always keep local copy for instant reads
+    const updated = [{ ...entry, id: Date.now().toString() } as QuizHistory, ...history].slice(0, 100);
+    localStorage.setItem(HISTORY_KEY(user.id), JSON.stringify(updated));
+    setHistory(updated);
+  }, [user, isDemo, history]);
+
+  const getHistory = useCallback((): QuizHistory[] => history, [history]);
+
+  const clearHistory = useCallback(async () => {
+    if (!user) return;
+    if (!isDemo) {
+      try { await api.delete('/api/quiz/history'); } catch { /* ignore */ }
+    }
+    localStorage.removeItem(HISTORY_KEY(user.id));
+    setHistory([]);
+  }, [user, isDemo]);
+
+  // ── Exam date ────────────────────────────────────────────────────────────────
+  const setExamDateRemote = useCallback(async (date: string) => {
+    if (!isDemo) {
+      await api.patch('/api/auth/exam-date', { examDate: date });
+    }
+    setUser((u) => u ? { ...u, examDate: date as unknown as Date } : u);
+  }, [isDemo]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        preferences,
-        isDemo,
-        login,
-        loginDemo,
-        register,
-        logout,
-        savePreferences,
-        erasePreferences,
-        addHistory,
-        getHistory,
-        clearHistory,
-      }}
-    >
+    <AuthContext.Provider value={{
+      user, preferences, isDemo, loading,
+      login, loginDemo, register, logout,
+      savePreferences, erasePreferences,
+      addHistory, getHistory, clearHistory,
+      setExamDateRemote,
+    }}>
       {children}
     </AuthContext.Provider>
   );

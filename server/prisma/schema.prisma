@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  exam         String    // NEET | JEE_MAIN | JEE_ADVANCED
+  classLevel   String    // 11 | 12 | Both
+  examDate     DateTime?
+  createdAt    DateTime  @default(now())
+
+  gameProfile    GameProfile?
+  quizHistory    QuizHistory[]
+  revisionQueue  RevisionItem[]
+  bookmarks      Bookmark[]
+  errorNotebook  ErrorNote[]
+  subscription   Subscription?
+}
+
+model GameProfile {
+  userId              String  @id
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  xp                  Int     @default(0)
+  streak              Int     @default(0)
+  lastActiveDate      String?
+  freezeTokens        Int     @default(0)
+  earnedBadgeIds      String[] @default([])
+  totalQuizzes        Int     @default(0)
+  perfectQuizzes      Int     @default(0)
+  highAccuracyQuizzes Int     @default(0)
+  breathingCompleted  Int     @default(0)
+  moodCheckDays       Int     @default(0)
+  mockTestsTaken      Int     @default(0)
+  updatedAt           DateTime @updatedAt
+}
+
+model QuizHistory {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             String
+  subject          String
+  score            Int
+  total            Int
+  accuracy         Int
+  wrongQuestionIds String[] @default([])
+  createdAt        DateTime @default(now())
+}
+
+model RevisionItem {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId  String
+  interval    Int      @default(1)
+  easiness    Float    @default(2.5)
+  repetitions Int      @default(0)
+  dueDate     String
+  addedDate   String
+
+  @@unique([userId, questionId])
+}
+
+model Bookmark {
+  userId     String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId String
+  createdAt  DateTime @default(now())
+
+  @@id([userId, questionId])
+}
+
+model ErrorNote {
+  userId     String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId String
+  createdAt  DateTime @default(now())
+
+  @@id([userId, questionId])
+}
+
+model Subscription {
+  userId               String   @id
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?
+  status               String   @default("free") // free | active | cancelled | past_due
+  plan                 String?  // monthly | yearly
+  currentPeriodEnd     DateTime?
+  updatedAt            DateTime @updatedAt
+}

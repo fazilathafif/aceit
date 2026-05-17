@@ -23,7 +23,7 @@ export default function LoginScreen() {
     setLoading(true);
     // Tiny delay for UX feel
     await new Promise((r) => setTimeout(r, 300));
-    const err = login(email, password, remember);
+    const err = await login(email, password, remember);
     setLoading(false);
     if (err) {
       setError(err);

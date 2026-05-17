@@ -19,6 +19,7 @@ import {
   getYesterday,
   getWeekKey,
 } from '../lib/gameUtils';
+import { api } from '../lib/api';
 
 // ─── Default state ─────────────────────────────────────────────────────────────
 const DEFAULT_PROFILE: GameProfile = {
@@ -183,7 +184,21 @@ export function GameProvider({ children, userId }: { children: ReactNode; userId
   }, [userId]);
 
   const saveProfile = useCallback(
-    (p: GameProfile) => { if (userId) localStorage.setItem(GAME_KEY(userId), JSON.stringify(p)); },
+    (p: GameProfile) => {
+      if (!userId) return;
+      localStorage.setItem(GAME_KEY(userId), JSON.stringify(p));
+      // Sync to server in background (non-demo users only)
+      if (!userId.startsWith('demo_')) {
+        api.put('/api/game', {
+          xp: p.xp, streak: p.streak, lastActiveDate: p.lastActiveDate,
+          freezeTokens: p.freezeTokens, earnedBadgeIds: p.earnedBadgeIds,
+          totalQuizzes: p.totalQuizzes, perfectQuizzes: p.perfectQuizzes,
+          highAccuracyQuizzes: p.highAccuracyQuizzes,
+          breathingCompleted: p.breathingCompleted,
+          moodCheckDays: p.moodCheckDays, mockTestsTaken: p.mockTestsTaken,
+        }).catch(() => { /* silent — local copy is authoritative */ });
+      }
+    },
     [userId]
   );
   const saveDaily = useCallback(
