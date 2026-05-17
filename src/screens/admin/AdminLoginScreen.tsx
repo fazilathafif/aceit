@@ -127,7 +127,7 @@ export default function AdminLoginScreen() {
 
         {mode === 'setup' && (
           <p className="text-slate-600 text-xs text-center mt-4">
-            First-time setup is disabled once an admin account exists.
+            This form only works when no admin account exists yet.
           </p>
         )}
       </div>

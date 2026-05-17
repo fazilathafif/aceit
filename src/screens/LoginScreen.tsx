@@ -70,6 +70,17 @@ export default function LoginScreen() {
             <p className="text-xs text-slate-400">Physics · Chem · Math</p>
           </button>
         </div>
+        <button
+          onClick={() => navigate('/admin/login')}
+          className="w-full mt-2 bg-slate-800 border border-slate-700 rounded-2xl p-3 flex items-center gap-3 active:scale-95 transition-transform"
+        >
+          <span className="w-8 h-8 bg-slate-700 rounded-lg flex items-center justify-center text-base flex-shrink-0">🛡</span>
+          <div className="text-left">
+            <p className="font-semibold text-sm">Sysadmin Panel</p>
+            <p className="text-xs text-slate-500">User &amp; subscription management</p>
+          </div>
+          <span className="ml-auto text-slate-600 text-xs">→</span>
+        </button>
       </div>
 
       {/* Divider */}
