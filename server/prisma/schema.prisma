@@ -15,6 +15,7 @@ model User {
   exam         String    // NEET | JEE_MAIN | JEE_ADVANCED
   classLevel   String    // 11 | 12 | Both
   examDate     DateTime?
+  isAdmin      Boolean   @default(false)
   createdAt    DateTime  @default(now())
 
   gameProfile    GameProfile?

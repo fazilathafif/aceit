@@ -7,6 +7,7 @@ import gameRoutes from './routes/game';
 import quizRoutes from './routes/quiz';
 import revisionRoutes from './routes/revision';
 import subscriptionRoutes from './routes/subscription';
+import adminRoutes from './routes/admin';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -19,6 +20,7 @@ app.use('/api/game', gameRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/revision', revisionRoutes);
 app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 

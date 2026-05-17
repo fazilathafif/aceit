@@ -26,6 +26,8 @@ import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import AITutor from './components/AITutor';
 import PremiumGate from './components/PremiumGate';
+import AdminLoginScreen from './screens/admin/AdminLoginScreen';
+import AdminDashboard from './screens/admin/AdminDashboard';
 import { useState } from 'react';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -66,6 +68,10 @@ function AppWithGame() {
                 <Routes>
                   <Route path="/login"    element={<LoginScreen />} />
                   <Route path="/register" element={<RegisterScreen />} />
+
+                  {/* Admin panel — standalone auth, no RequireAuth wrapper */}
+                  <Route path="/admin/login" element={<AdminLoginScreen />} />
+                  <Route path="/admin"       element={<AdminDashboard />} />
 
                   <Route path="/"           element={<RequireAuth><HomeScreen /></RequireAuth>} />
                   <Route path="/setup"      element={<RequireAuth><SetupScreen /></RequireAuth>} />
