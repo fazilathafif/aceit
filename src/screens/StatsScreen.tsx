@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
 import { useRevision } from '../context/RevisionContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { getQuestionsForConfig } from '../data/questions';
 import { getChapters } from '../data/syllabus';
 import { groupHistoryByWeek, getSubjectAccuracy, getAccuracyTrend } from '../lib/gameUtils';
@@ -71,6 +72,7 @@ export default function StatsScreen() {
   const { user, getHistory } = useAuth();
   const { profile, level, daysToExam } = useGame();
   const { queue, dueCount, errorNotebook, bookmarks, chapterStats } = useRevision();
+  const { isPremium } = useSubscription();
 
   const history = getHistory();
   const [activeSubjectTab, setActiveSubjectTab] = useState(0);
@@ -142,20 +144,34 @@ export default function StatsScreen() {
 
         {/* ── Trends tab ─────────────────────────────────────────────────── */}
         {mainTab === 'trends' && (
-          <div className="space-y-5">
-            <div className="bg-slate-800 rounded-2xl p-4">
-              <p className="text-xs font-semibold text-slate-400 tracking-widest mb-3">ACCURACY TREND</p>
-              <AccuracyTrendChart data={trendAccuracy} />
+          !isPremium ? (
+            <div className="bg-slate-800 rounded-2xl p-6 text-center space-y-3">
+              <p className="text-3xl">📈</p>
+              <p className="font-bold text-lg">Analytics Trends</p>
+              <p className="text-slate-400 text-sm">Accuracy trends, subject radar, and weekly activity charts are available on Premium.</p>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="mt-2 bg-primary text-white font-semibold px-6 py-2.5 rounded-xl text-sm"
+              >
+                View Plans →
+              </button>
             </div>
-            <div className="bg-slate-800 rounded-2xl p-4">
-              <p className="text-xs font-semibold text-slate-400 tracking-widest mb-3">SUBJECT BALANCE</p>
-              <SubjectRadarChart data={subjectRadarData} />
+          ) : (
+            <div className="space-y-5">
+              <div className="bg-slate-800 rounded-2xl p-4">
+                <p className="text-xs font-semibold text-slate-400 tracking-widest mb-3">ACCURACY TREND</p>
+                <AccuracyTrendChart data={trendAccuracy} />
+              </div>
+              <div className="bg-slate-800 rounded-2xl p-4">
+                <p className="text-xs font-semibold text-slate-400 tracking-widest mb-3">SUBJECT BALANCE</p>
+                <SubjectRadarChart data={subjectRadarData} />
+              </div>
+              <div className="bg-slate-800 rounded-2xl p-4">
+                <p className="text-xs font-semibold text-slate-400 tracking-widest mb-3">WEEKLY ACTIVITY</p>
+                <WeeklyQuizBar data={weeklyData} />
+              </div>
             </div>
-            <div className="bg-slate-800 rounded-2xl p-4">
-              <p className="text-xs font-semibold text-slate-400 tracking-widest mb-3">WEEKLY ACTIVITY</p>
-              <WeeklyQuizBar data={weeklyData} />
-            </div>
-          </div>
+          )
         )}
 
         {/* ── Overview tab ───────────────────────────────────────────────── */}

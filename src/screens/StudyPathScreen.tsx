@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useRevision } from '../context/RevisionContext';
 import { useQuiz } from '../context/QuizContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { getQuestionsForConfig } from '../data/questions';
 import { getChapters } from '../data/syllabus';
 import { getSubjectAccuracy } from '../lib/gameUtils';
@@ -45,6 +46,7 @@ export default function StudyPathScreen() {
   const { user, getHistory } = useAuth();
   const { dispatch } = useQuiz();
   const { chapterStats } = useRevision();
+  const { isPremium } = useSubscription();
 
   const [aiPlan, setAiPlan] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -204,36 +206,50 @@ export default function StudyPathScreen() {
 
         {/* ── AI Plan tab ───────────────────────────────────────────── */}
         {tab === 'ai' && (
-          <div className="bg-slate-800 rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold">🤖 AI-Generated Plan</h2>
-              {!loading && (
-                <button
-                  onClick={() => loadAiPlan(true)}
-                  className="text-xs text-primary font-medium active:scale-95 transition-transform"
-                >
-                  Refresh ↺
-                </button>
+          !isPremium ? (
+            <div className="bg-slate-800 rounded-2xl p-6 text-center space-y-3">
+              <p className="text-3xl">🤖</p>
+              <p className="font-bold text-lg">AI Study Plan</p>
+              <p className="text-slate-400 text-sm">Get a personalised week-by-week study schedule powered by Claude AI — available on Premium.</p>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="mt-2 bg-primary text-white font-semibold px-6 py-2.5 rounded-xl text-sm"
+              >
+                View Plans →
+              </button>
+            </div>
+          ) : (
+            <div className="bg-slate-800 rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold">🤖 AI-Generated Plan</h2>
+                {!loading && (
+                  <button
+                    onClick={() => loadAiPlan(true)}
+                    className="text-xs text-primary font-medium active:scale-95 transition-transform"
+                  >
+                    Refresh ↺
+                  </button>
+                )}
+              </div>
+              {loading ? (
+                <div className="flex items-center justify-center py-10 gap-2">
+                  <div className="w-4 h-4 rounded-full bg-primary animate-bounce" />
+                  <div className="w-4 h-4 rounded-full bg-primary animate-bounce [animation-delay:0.15s]" />
+                  <div className="w-4 h-4 rounded-full bg-primary animate-bounce [animation-delay:0.3s]" />
+                </div>
+              ) : aiPlan ? (
+                <div className="prose prose-invert prose-sm max-w-none text-slate-300 leading-relaxed whitespace-pre-wrap text-xs">
+                  {aiPlan}
+                </div>
+              ) : (
+                <p className="text-slate-500 text-xs text-center py-6">
+                  {daysLeft === null
+                    ? 'Set your exam date first to generate a plan.'
+                    : 'Tap Refresh to generate your AI study plan.'}
+                </p>
               )}
             </div>
-            {loading ? (
-              <div className="flex items-center justify-center py-10 gap-2">
-                <div className="w-4 h-4 rounded-full bg-primary animate-bounce" />
-                <div className="w-4 h-4 rounded-full bg-primary animate-bounce [animation-delay:0.15s]" />
-                <div className="w-4 h-4 rounded-full bg-primary animate-bounce [animation-delay:0.3s]" />
-              </div>
-            ) : aiPlan ? (
-              <div className="prose prose-invert prose-sm max-w-none text-slate-300 leading-relaxed whitespace-pre-wrap text-xs">
-                {aiPlan}
-              </div>
-            ) : (
-              <p className="text-slate-500 text-xs text-center py-6">
-                {daysLeft === null
-                  ? 'Set your exam date first to generate a plan.'
-                  : 'Tap Refresh to generate your AI study plan.'}
-              </p>
-            )}
-          </div>
+          )
         )}
 
       </main>
