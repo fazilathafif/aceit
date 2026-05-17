@@ -340,24 +340,20 @@ function UserActions({ user, onAction, compact = false }: { user: AdminUser; onA
 function PlanCard({ plan, onEdit, onDelete }: { plan: AdminPlan; onEdit: (p: AdminPlan) => void; onDelete: (p: AdminPlan) => void }) {
   const cycleLabel: Record<string, string> = { free: 'Free tier', monthly: '/month', yearly: '/year', lifetime: 'one-time' };
   return (
-    <div className={`bg-slate-800 rounded-2xl p-5 border ${plan.isActive ? 'border-slate-700' : 'border-slate-700/40 opacity-60'}`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="min-w-0 flex-1 mr-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-bold text-base">{plan.name}</h3>
-            {!plan.isActive && <span className="text-[10px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded font-semibold">Inactive</span>}
-          </div>
-          <p className="text-xl font-bold text-indigo-400 mt-1">
-            {plan.priceUsd === 0 ? 'Free' : `$${plan.priceUsd.toFixed(2)}`}
-            <span className="text-slate-500 text-sm font-normal ml-1">{cycleLabel[plan.billingCycle] ?? plan.billingCycle}</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button onClick={() => onEdit(plan)} className="p-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white text-xs" title="Edit">✏️</button>
-          <button onClick={() => onDelete(plan)} className="p-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-red-400 text-xs" title="Delete">🗑</button>
-        </div>
+    <div className={`bg-slate-800 rounded-2xl p-5 border flex flex-col ${plan.isActive ? 'border-slate-700' : 'border-slate-700/40 opacity-60'}`}>
+      {/* Name + inactive badge */}
+      <div className="flex items-center gap-2 mb-1">
+        <h3 className="font-bold text-base">{plan.name}</h3>
+        {!plan.isActive && <span className="text-[10px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded font-semibold">Inactive</span>}
       </div>
 
+      {/* Price */}
+      <p className="text-xl font-bold text-indigo-400 mb-3">
+        {plan.priceUsd === 0 ? 'Free' : `$${plan.priceUsd.toFixed(2)}`}
+        <span className="text-slate-500 text-sm font-normal ml-1">{cycleLabel[plan.billingCycle] ?? plan.billingCycle}</span>
+      </p>
+
+      {/* Subscriber count + Stripe badge */}
       <div className="flex items-center gap-2 mb-3">
         <span className="text-xs text-slate-400">
           <span className="text-white font-semibold">{plan.subscriberCount}</span> {plan.billingCycle === 'free' ? 'free users' : 'subscribers'}
@@ -365,13 +361,30 @@ function PlanCard({ plan, onEdit, onDelete }: { plan: AdminPlan; onEdit: (p: Adm
         {plan.stripePriceId && <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-semibold">Stripe linked</span>}
       </div>
 
-      <ul className="space-y-1">
+      {/* Feature list */}
+      <ul className="space-y-1 flex-1 mb-4">
         {plan.features.map((f, i) => (
           <li key={i} className="flex items-start gap-1.5 text-xs text-slate-400">
             <span className="text-emerald-400 mt-0.5 flex-shrink-0">✓</span>{f}
           </li>
         ))}
       </ul>
+
+      {/* Action buttons — always at the bottom, full width */}
+      <div className="flex gap-2 pt-3 border-t border-slate-700">
+        <button
+          onClick={() => onEdit(plan)}
+          className="flex-1 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:text-white hover:border-indigo-500 text-xs font-medium transition-colors"
+        >
+          ✏️ Edit
+        </button>
+        <button
+          onClick={() => onDelete(plan)}
+          className="flex-1 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:text-red-400 hover:border-red-500/50 text-xs font-medium transition-colors"
+        >
+          🗑 Delete
+        </button>
+      </div>
     </div>
   );
 }
