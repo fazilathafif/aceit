@@ -98,3 +98,16 @@ model Subscription {
   currentPeriodEnd     DateTime?
   updatedAt            DateTime @updatedAt
 }
+
+model Plan {
+  id           String   @id @default(cuid())
+  name         String
+  billingCycle String   // monthly | yearly | lifetime
+  priceUsd     Float
+  features     String[] @default([])
+  isActive     Boolean  @default(true)
+  stripePriceId String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

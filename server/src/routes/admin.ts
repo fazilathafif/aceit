@@ -184,4 +184,153 @@ router.delete('/users/:id', requireAdmin, async (req: AuthRequest, res: Response
   res.json({ ok: true });
 });
 
+// POST /api/admin/users  — create a test/demo user
+router.post('/users', requireAdmin, async (req: AuthRequest, res: Response) => {
+  const { name, email, password, exam, classLevel, isPremium, plan } =
+    req.body as Record<string, string> & { isPremium?: boolean };
+  if (!name || !email || !password || !exam || !classLevel) {
+    res.status(400).json({ error: 'name, email, password, exam, and classLevel are required.' });
+    return;
+  }
+  if (password.length < 6) {
+    res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    return;
+  }
+  const normalised = email.trim().toLowerCase();
+  const existing = await prisma.user.findUnique({ where: { email: normalised } });
+  if (existing) {
+    res.status(409).json({ error: 'A user with this email already exists.' });
+    return;
+  }
+  const passwordHash = await bcrypt.hash(password, 12);
+  const user = await prisma.user.create({
+    data: { name: name.trim(), email: normalised, passwordHash, exam, classLevel },
+  });
+  await Promise.all([
+    prisma.gameProfile.create({ data: { userId: user.id } }),
+    prisma.subscription.create({
+      data: {
+        userId: user.id,
+        status: isPremium ? 'active' : 'free',
+        plan: isPremium ? (plan ?? 'monthly') : null,
+      },
+    }),
+  ]);
+  res.status(201).json({
+    id: user.id, name: user.name, email: user.email,
+    exam: user.exam, classLevel: user.classLevel,
+    createdAt: user.createdAt,
+    subscription: { status: isPremium ? 'active' : 'free', plan: isPremium ? (plan ?? 'monthly') : null, currentPeriodEnd: null },
+    gameProfile: { xp: 0, streak: 0, totalQuizzes: 0 },
+  });
+});
+
+// ── Plans ─────────────────────────────────────────────────────────────────────
+
+const DEFAULT_PLANS = [
+  {
+    name: 'Free',
+    billingCycle: 'free',
+    priceUsd: 0,
+    sortOrder: 0,
+    features: [
+      'Unlimited basic quizzes',
+      'Flashcards (10 cards/day)',
+      'Daily challenge',
+      'Stats overview',
+    ],
+  },
+  {
+    name: 'Monthly',
+    billingCycle: 'monthly',
+    priceUsd: 4.99,
+    sortOrder: 1,
+    features: [
+      'Everything in Free',
+      'Full mock tests (JEE / NEET)',
+      'AI Tutor (Claude-powered)',
+      'AI Study Path & schedule',
+      'Analytics Trends charts',
+      'Speed Round & 1v1 Duel',
+      'Social leaderboard',
+      'Formula sheets & concepts',
+      'Unlimited revision queue',
+    ],
+  },
+  {
+    name: 'Yearly',
+    billingCycle: 'yearly',
+    priceUsd: 39.99,
+    sortOrder: 2,
+    features: [
+      'Everything in Monthly',
+      '2 months free vs monthly',
+      'Priority support',
+    ],
+  },
+];
+
+// GET /api/admin/plans  — list all plans; seed defaults if none exist
+router.get('/plans', requireAdmin, async (_req: AuthRequest, res: Response) => {
+  let plans = await prisma.plan.findMany({ orderBy: { sortOrder: 'asc' } });
+  if (plans.length === 0) {
+    plans = await Promise.all(
+      DEFAULT_PLANS.map((p) => prisma.plan.create({ data: p })),
+    );
+  }
+  // Attach subscriber counts
+  const subs = await prisma.subscription.groupBy({
+    by: ['plan', 'status'],
+    _count: true,
+  });
+  const countMap: Record<string, number> = {};
+  for (const s of subs) {
+    if (s.status === 'active' && s.plan) countMap[s.plan] = (countMap[s.plan] ?? 0) + s._count;
+  }
+  const freeCount = await prisma.subscription.count({ where: { status: 'free' } });
+  const result = plans.map((p) => ({
+    ...p,
+    subscriberCount: p.billingCycle === 'free' ? freeCount : (countMap[p.billingCycle] ?? 0),
+  }));
+  res.json(result);
+});
+
+// POST /api/admin/plans  — create a new plan
+router.post('/plans', requireAdmin, async (req: AuthRequest, res: Response) => {
+  const { name, billingCycle, priceUsd, features, stripePriceId, sortOrder } =
+    req.body as { name: string; billingCycle: string; priceUsd: number; features?: string[]; stripePriceId?: string; sortOrder?: number };
+  if (!name || !billingCycle || priceUsd === undefined) {
+    res.status(400).json({ error: 'name, billingCycle, and priceUsd are required.' });
+    return;
+  }
+  const plan = await prisma.plan.create({
+    data: { name, billingCycle, priceUsd, features: features ?? [], stripePriceId: stripePriceId ?? null, sortOrder: sortOrder ?? 0 },
+  });
+  res.status(201).json(plan);
+});
+
+// PATCH /api/admin/plans/:id  — update plan
+router.patch('/plans/:id', requireAdmin, async (req: AuthRequest, res: Response) => {
+  const { name, billingCycle, priceUsd, features, isActive, stripePriceId, sortOrder } = req.body as {
+    name?: string; billingCycle?: string; priceUsd?: number; features?: string[];
+    isActive?: boolean; stripePriceId?: string; sortOrder?: number;
+  };
+  const data: Record<string, unknown> = {};
+  if (name !== undefined) data.name = name;
+  if (billingCycle !== undefined) data.billingCycle = billingCycle;
+  if (priceUsd !== undefined) data.priceUsd = priceUsd;
+  if (features !== undefined) data.features = features;
+  if (isActive !== undefined) data.isActive = isActive;
+  if (stripePriceId !== undefined) data.stripePriceId = stripePriceId;
+  if (sortOrder !== undefined) data.sortOrder = sortOrder;
+  const plan = await prisma.plan.update({ where: { id: req.params.id }, data });
+  res.json(plan);
+});
+
+// DELETE /api/admin/plans/:id
+router.delete('/plans/:id', requireAdmin, async (req: AuthRequest, res: Response) => {
+  await prisma.plan.delete({ where: { id: req.params.id } });
+  res.json({ ok: true });
+});
+
 export default router;

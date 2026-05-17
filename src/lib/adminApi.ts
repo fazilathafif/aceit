@@ -41,16 +41,22 @@ export const adminApi = {
     req<{ token: string; admin: { id: string; name: string; email: string } }>(
       'POST', '/api/admin/make-first-admin', { name, email, password },
     ),
+
+  // Stats
   stats: () =>
     req<{ totalUsers: number; premiumUsers: number; weeklySignups: number }>(
       'GET', '/api/admin/stats',
     ),
+
+  // Users
   listUsers: (q: string, page: number) =>
     req<{ users: AdminUser[]; total: number; page: number; pages: number }>(
       'GET', `/api/admin/users?q=${encodeURIComponent(q)}&page=${page}&limit=20`,
     ),
   getUser: (id: string) =>
     req<AdminUserDetail>('GET', `/api/admin/users/${id}`),
+  createUser: (data: CreateUserInput) =>
+    req<AdminUser>('POST', '/api/admin/users', data),
   updateUser: (id: string, data: Partial<{ name: string; email: string; exam: string; classLevel: string }>) =>
     req<AdminUser>('PATCH', `/api/admin/users/${id}`, data),
   resetPassword: (id: string, newPassword: string) =>
@@ -59,7 +65,29 @@ export const adminApi = {
     req<unknown>('PATCH', `/api/admin/users/${id}/subscription`, { status, plan }),
   deleteUser: (id: string) =>
     req<{ ok: boolean }>('DELETE', `/api/admin/users/${id}`),
+
+  // Plans
+  listPlans: () =>
+    req<AdminPlan[]>('GET', '/api/admin/plans'),
+  createPlan: (data: PlanInput) =>
+    req<AdminPlan>('POST', '/api/admin/plans', data),
+  updatePlan: (id: string, data: Partial<PlanInput & { isActive: boolean; sortOrder: number }>) =>
+    req<AdminPlan>('PATCH', `/api/admin/plans/${id}`, data),
+  deletePlan: (id: string) =>
+    req<{ ok: boolean }>('DELETE', `/api/admin/plans/${id}`),
 };
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export interface CreateUserInput {
+  name: string;
+  email: string;
+  password: string;
+  exam: string;
+  classLevel: string;
+  isPremium?: boolean;
+  plan?: string;
+}
 
 export interface AdminUser {
   id: string;
@@ -76,4 +104,26 @@ export interface AdminUserDetail extends AdminUser {
   examDate: string | null;
   isAdmin: boolean;
   _count: { quizHistory: number; revisionQueue: number; bookmarks: number };
+}
+
+export interface PlanInput {
+  name: string;
+  billingCycle: string;
+  priceUsd: number;
+  features: string[];
+  stripePriceId?: string;
+}
+
+export interface AdminPlan {
+  id: string;
+  name: string;
+  billingCycle: string;
+  priceUsd: number;
+  features: string[];
+  isActive: boolean;
+  stripePriceId: string | null;
+  sortOrder: number;
+  subscriberCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
