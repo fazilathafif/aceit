@@ -9,6 +9,7 @@ export default function AdminLoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +26,7 @@ export default function AdminLoginScreen() {
       } else {
         res = await adminApi.login(email, password);
       }
-      saveAdminToken(res.token);
+      saveAdminToken(res.token, remember);
       navigate('/admin');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed.');
@@ -109,6 +110,19 @@ export default function AdminLoginScreen() {
               </button>
             </div>
           </div>
+
+          {/* Remember me — login mode only */}
+          {mode === 'login' && (
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="w-4 h-4 accent-indigo-500 rounded"
+              />
+              <span className="text-sm text-slate-300">Remember me</span>
+            </label>
+          )}
 
           {error && (
             <p className="text-red-400 text-xs bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">

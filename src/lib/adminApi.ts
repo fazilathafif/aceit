@@ -2,12 +2,19 @@ const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 const KEY = 'aceit_admin_token';
 
 export function getAdminToken(): string | null {
-  return sessionStorage.getItem(KEY);
+  return localStorage.getItem(KEY) ?? sessionStorage.getItem(KEY);
 }
-export function saveAdminToken(token: string) {
-  sessionStorage.setItem(KEY, token);
+export function saveAdminToken(token: string, remember: boolean) {
+  if (remember) {
+    localStorage.setItem(KEY, token);
+    sessionStorage.removeItem(KEY);
+  } else {
+    sessionStorage.setItem(KEY, token);
+    localStorage.removeItem(KEY);
+  }
 }
 export function clearAdminToken() {
+  localStorage.removeItem(KEY);
   sessionStorage.removeItem(KEY);
 }
 

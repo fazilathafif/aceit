@@ -48,9 +48,13 @@ export default function HomeScreen() {
           <p className="text-slate-400 text-sm">{getGreeting()}</p>
           <button
             onClick={() => { logout(); navigate('/login'); }}
-            className="text-xs text-slate-500 hover:text-red-400 transition-colors font-medium"
+            title="Sign out"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 hover:bg-red-900/40 hover:text-red-400 text-slate-400 transition-colors"
           >
-            Sign out
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clipRule="evenodd" />
+              <path fillRule="evenodd" d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-1.08a.75.75 0 1 0-1.004-1.116l-2.5 2.25a.75.75 0 0 0 0 1.116l2.5 2.25a.75.75 0 1 0 1.004-1.116l-1.048-1.08H18.25A.75.75 0 0 0 19 10Z" clipRule="evenodd" />
+            </svg>
           </button>
         </div>
         <h1 className="text-3xl font-bold mt-0.5">{firstName} 👋</h1>
