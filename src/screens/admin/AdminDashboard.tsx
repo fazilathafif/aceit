@@ -342,19 +342,19 @@ function PlanCard({ plan, onEdit, onDelete }: { plan: AdminPlan; onEdit: (p: Adm
   return (
     <div className={`bg-slate-800 rounded-2xl p-5 border ${plan.isActive ? 'border-slate-700' : 'border-slate-700/40 opacity-60'}`}>
       <div className="flex items-start justify-between mb-3">
-        <div>
-          <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1 mr-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-bold text-base">{plan.name}</h3>
             {!plan.isActive && <span className="text-[10px] bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded font-semibold">Inactive</span>}
           </div>
-          <p className="text-2xl font-bold text-indigo-400 mt-1">
+          <p className="text-xl font-bold text-indigo-400 mt-1">
             {plan.priceUsd === 0 ? 'Free' : `$${plan.priceUsd.toFixed(2)}`}
             <span className="text-slate-500 text-sm font-normal ml-1">{cycleLabel[plan.billingCycle] ?? plan.billingCycle}</span>
           </p>
         </div>
-        <div className="flex items-center gap-1">
-          <button onClick={() => onEdit(plan)} className="p-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white text-xs">✏️</button>
-          <button onClick={() => onDelete(plan)} className="p-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-red-400 text-xs">🗑</button>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button onClick={() => onEdit(plan)} className="p-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-white text-xs" title="Edit">✏️</button>
+          <button onClick={() => onDelete(plan)} className="p-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-red-400 text-xs" title="Delete">🗑</button>
         </div>
       </div>
 
@@ -593,18 +593,18 @@ export default function AdminDashboard() {
         {/* ── Users tab ── */}
         {tab === 'users' && (
           <div className="space-y-4">
-            <div className="flex gap-2">
-              <form onSubmit={handleSearch} className="flex gap-2 flex-1">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-0">
                 <input
                   type="search" value={draftQ} onChange={(e) => setDraftQ(e.target.value)}
                   placeholder="Search by name or email…"
-                  className="flex-1 bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-lg px-4 py-2 text-sm outline-none placeholder-slate-500"
+                  className="flex-1 min-w-0 bg-slate-800 border border-slate-700 focus:border-indigo-500 rounded-lg px-4 py-2 text-sm outline-none placeholder-slate-500"
                 />
-                <button type="submit" className="bg-slate-800 border border-slate-700 hover:border-indigo-500 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Search</button>
+                <button type="submit" className="bg-slate-800 border border-slate-700 hover:border-indigo-500 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-shrink-0">Search</button>
               </form>
               <button
                 onClick={() => setModal({ type: 'createUser' })}
-                className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex-shrink-0 text-center"
               >
                 + Add User
               </button>
